@@ -239,35 +239,47 @@
     let currentUser = null;
 
     // Gửi Request POST sang Google Apps Script API
-    function apiRequest(payload) {
-	  return new Promise((resolve, reject) => {
-		// Tạo tên hàm callback ngẫu nhiên
-		const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-		
-		// Tạo thẻ script
-		const script = document.createElement('script');
-		
-		// Gán hàm vào window để hứng dữ liệu trả về
-		window[callbackName] = function(data) {
-		  delete window[callbackName];
-		  document.body.removeChild(script);
-		  resolve(data);
-		};
-
-		// Bắt lỗi nếu mất mạng hoặc link lỗi
-		script.onerror = function() {
-		  delete window[callbackName];
-		  if (document.body.contains(script)) {
-			document.body.removeChild(script);
+    async function apiRequest(payload) {
+	  const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
+	  
+	  try {
+		const response = await fetch(url, {
+		  method: "GET",
+		  mode: "cors",
+		  credentials: "omit", // BẮT BUỘC: Ép trình duyệt không gửi cookie Google, chống lỗi /u/6/
+		  headers: {
+			"Accept": "application/json"
 		  }
-		  reject(new Error("Không thể kết nối đến máy chủ Google (Vui lòng kiểm tra lại quyền Deploy)"));
-		};
+		});
 
-		// Tạo link gọi dữ liệu
-		const url = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
-		script.src = url;
-		document.body.appendChild(script);
-	  });
+		if (!response.ok) {
+		  throw new Error("Mã phản hồi từ máy chủ: " + response.status);
+		}
+		return await response.json();
+
+	  } catch (fetchErr) {
+		// Dự phòng bằng JSONP ẩn danh nếu trình duyệt cũ không hỗ trợ fetch CORS
+		return new Promise((resolve, reject) => {
+		  const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+		  const script = document.createElement('script');
+		  script.crossOrigin = "anonymous"; // Không gửi cookie
+		  
+		  window[callbackName] = function(data) {
+			delete window[callbackName];
+			if (document.body.contains(script)) document.body.removeChild(script);
+			resolve(data);
+		  };
+
+		  script.onerror = function() {
+			delete window[callbackName];
+			if (document.body.contains(script)) document.body.removeChild(script);
+			reject(new Error("Không thể kết nối đến máy chủ Google. Vui lòng thử lại!"));
+		  };
+
+		  script.src = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
+		  document.body.appendChild(script);
+		});
+	  }
 	}
 
     function showAppAlert(msgHtml, title = "Thông báo", type = "info") {
