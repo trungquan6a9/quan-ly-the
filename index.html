@@ -234,7 +234,7 @@
 
   <script>
     const APP_NAME = "NhanTraThe";
-    const APP_VERSION = "1.0.1";
+    const APP_VERSION = "1.0.3";
 
     // Format ngày giờ hiển thị chuẩn dd/MM/yyyy HH:mm:ss
     function formatDisplayDate(val) {
@@ -279,49 +279,101 @@
 
     let currentUser = null;
 
-    // Gửi Request POST sang Google Apps Script API
+    // Hàm gọi API ổn định cao: Hỗ trợ tự động Thử lại (Retry) + Đa phương thức (POST text/plain & JSONP)
     async function apiRequest(payload) {
-	  const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
-	  
-	  try {
-		const response = await fetch(url, {
-		  method: "GET",
-		  mode: "cors",
-		  credentials: "omit", // BẮT BUỘC: Ép trình duyệt không gửi cookie Google, chống lỗi /u/6/
-		  headers: {
-			"Accept": "application/json"
-		  }
-		});
+      const maxRetries = 2;
+      let lastErr = null;
 
-		if (!response.ok) {
-		  throw new Error("Mã phản hồi từ máy chủ: " + response.status);
-		}
-		return await response.json();
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (attempt > 0) {
+          // Chờ 800ms trước khi retry lại
+          await new Promise(r => setTimeout(r, 800 * attempt));
+        }
 
-	  } catch (fetchErr) {
-		// Dự phòng bằng JSONP ẩn danh nếu trình duyệt cũ không hỗ trợ fetch CORS
-		return new Promise((resolve, reject) => {
-		  const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-		  const script = document.createElement('script');
-		  script.crossOrigin = "anonymous"; // Không gửi cookie
-		  
-		  window[callbackName] = function(data) {
-			delete window[callbackName];
-			if (document.body.contains(script)) document.body.removeChild(script);
-			resolve(data);
-		  };
+        // Cách 1: POST với Content-Type text/plain (Không kích hoạt CORS preflight OPTIONS, gửi payload an toàn)
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
-		  script.onerror = function() {
-			delete window[callbackName];
-			if (document.body.contains(script)) document.body.removeChild(script);
-			reject(new Error("Không thể kết nối đến máy chủ Google. Vui lòng thử lại!"));
-		  };
+          const postRes = await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "cors",
+            credentials: "omit",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
-		  script.src = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
-		  document.body.appendChild(script);
-		});
-	  }
-	}
+          if (postRes.ok) {
+            const data = await postRes.json();
+            return data;
+          }
+        } catch (e1) {
+          lastErr = e1;
+        }
+
+        // Cách 2: GET query parameter (Fallback nếu POST bị mạng chặn)
+        try {
+          const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+          const getRes = await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (getRes.ok) {
+            const data = await getRes.json();
+            return data;
+          }
+        } catch (e2) {
+          lastErr = e2;
+        }
+
+        // Cách 3: JSONP (Vượt mọi tường lửa CORS của các trình duyệt ngặt nghèo)
+        try {
+          const jsonpData = await new Promise((resolve, reject) => {
+            const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+            const script = document.createElement('script');
+            script.crossOrigin = "anonymous";
+
+            const timer = setTimeout(() => {
+              cleanup();
+              reject(new Error("Timeout khi kết nối qua JSONP"));
+            }, 12000);
+
+            function cleanup() {
+              clearTimeout(timer);
+              delete window[callbackName];
+              if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[callbackName] = function(data) {
+              cleanup();
+              resolve(data);
+            };
+
+            script.onerror = function() {
+              cleanup();
+              reject(new Error("Không thể tải script JSONP"));
+            };
+
+            script.src = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
+            document.body.appendChild(script);
+          });
+          return jsonpData;
+        } catch (e3) {
+          lastErr = e3;
+        }
+      }
+
+      throw (lastErr || new Error("Không thể kết nối đến máy chủ Google Apps Script. Vui lòng thử lại sau vài giây!"));
+    }
 
     function showAppAlert(msgHtml, title = "Thông báo", type = "info") {
       const modal = document.getElementById('custom-modal');
