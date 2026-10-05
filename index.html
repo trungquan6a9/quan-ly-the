@@ -240,13 +240,14 @@
 
     // Gửi Request POST sang Google Apps Script API
     async function apiRequest(payload) {
-      const response = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      });
-      return await response.json();
-    }
+	  // Gửi qua GET với param được encode URI, bypass hoàn toàn lỗi CORS của Google
+	  const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
+	  const response = await fetch(url, {
+		method: "GET",
+		mode: "cors"
+	  });
+	  return await response.json();
+	}
 
     function showAppAlert(msgHtml, title = "Thông báo", type = "info") {
       const modal = document.getElementById('custom-modal');
