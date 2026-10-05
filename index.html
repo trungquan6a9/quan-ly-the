@@ -233,6 +233,47 @@
   </div>
 
   <script>
+    const APP_NAME = "NhanTraThe";
+    const APP_VERSION = "1.0.1";
+
+    // Format ngày giờ hiển thị chuẩn dd/MM/yyyy HH:mm:ss
+    function formatDisplayDate(val) {
+      if (!val) return 'N/A';
+      const str = String(val).trim();
+      if (!str || str === 'N/A') return 'N/A';
+
+      // Nếu đã đúng định dạng dd/MM/yyyy HH:mm:ss (ngày > 12 hoặc đã chuẩn)
+      // Kiểm tra pattern: MM/dd/yyyy HH:mm:ss hoặc dd/MM/yyyy HH:mm:ss
+      const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2}):?(\d{1,2})?)?/);
+      if (match) {
+        let p1 = parseInt(match[1], 10);
+        let p2 = parseInt(match[2], 10);
+        const y = match[3];
+        const timePart = (match[4] !== undefined) ? ` ${match[4].padStart(2, '0')}:${match[5].padStart(2, '0')}:${(match[6] || '00').padStart(2, '0')}` : '';
+
+        // Trường hợp bị đảo MM/dd/yyyy (ví dụ: 10/05/2026 trong khi hôm nay là 05/10/2026):
+        // Nếu p1 <= 12 và p2 <= 31, nhưng trên hệ thống trả về tháng đứng trước ngày (chuẩn US của Sheet/JS date)
+        // Lưu ý: nếu p1 > 12 thì chắc chắn p1 là ngày rồi (ví dụ: 25/10/2026) -> giữ nguyên p1/p2/y.
+        // Ngược lại nếu p1 <= 12 và dữ liệu từ Google Sheet tự convert thành MM/dd/yyyy -> hoán đổi lại thành dd/MM/yyyy:
+        // Cần đảm bảo nếu được nhập từ Google Sheet US format:
+        return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${y}${timePart}`;
+      }
+
+      // Thử parse qua Date object nếu là ISO hoặc format khác
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+      }
+
+      return str;
+    }
+
     // DÁN LINK APPS SCRIPT WEB APP CỦA ANH VÀO ĐÂY:
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBkd-t0TI8Y3Zkc-CK378at44j7WvYR6e08UYFbbn6pzCgz22OxJLGUSp9c2rFfnxn/exec";
 
@@ -509,12 +550,12 @@
         <div class="info-list-item"><span><b>Trạng thái nhận:</b></span> <span>${d.cardNoReceiveCar === 'Không nhận thẻ xe' ? '<span style="color:var(--danger)">Không nhận</span>' : '<span style="color:var(--success)">Đã nhận</span>'}</span></div>
         <div class="info-list-item"><span><b>Số thẻ xe nhận:</b></span> <span>${d.cardNoReceiveCar || 'N/A'}</span></div>
         <div class="info-list-item"><span><b>Biển số xe:</b></span> <span>${d.plateReceiveCar || 'N/A'}</span></div>
-        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveCar || 'N/A'}</span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${formatDisplayDate(d.dateReceiveCar)}</span></div>
       `;
       if (d.dateReturnCar) {
         html += `
           <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnCar}</b></span></div>
-          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnCar}</span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${formatDisplayDate(d.dateReturnCar)}</span></div>
         `;
       }
       showAppAlert(html, "Chi Tiết Thẻ Xe", "info");
@@ -525,12 +566,12 @@
       let html = `
         <div class="info-list-item"><span><b>Họ tên:</b></span> <span>${d.nameUpper || d.name}</span></div>
         <div class="info-list-item"><span><b>Mã NV trên thẻ nhận:</b></span> <span><b>${d.cardNoReceiveEmp || 'N/A'}</b></span></div>
-        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveEmp || 'N/A'}</span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${formatDisplayDate(d.dateReceiveEmp)}</span></div>
       `;
       if (d.dateReturnEmp) {
         html += `
           <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnEmp}</b></span></div>
-          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnEmp}</span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${formatDisplayDate(d.dateReturnEmp)}</span></div>
         `;
       }
       showAppAlert(html, "Chi Tiết Thẻ Nhân Viên", "info");
