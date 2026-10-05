@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cổng Quản Lý Thẻ</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-hover: #1557b0;
+      --success: #1e8e3e;
+      --danger: #d93025;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #202124;
+      --subtext: #5f6368;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 480px; background: var(--card-bg); padding: 28px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; text-align: center; color: var(--primary); font-size: 22px; }
+    p.subtitle { text-align: center; color: var(--subtext); margin-bottom: 24px; font-size: 14px; }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+    input[type="text"], input[type="email"], input[type="tel"] { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 15px; outline: none; transition: border 0.2s; }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus { border-color: var(--primary); }
+    .prefix-input { display: flex; align-items: center; border: 1px solid #dadce0; border-radius: 6px; overflow: hidden; }
+    .prefix-input span { background: #e8f0fe; color: var(--primary); font-weight: bold; padding: 12px 14px; border-right: 1px solid #dadce0; font-size: 15px; }
+    .prefix-input input { border: none; border-radius: 0; flex: 1; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 16px 0; font-size: 14px; }
+    .btn { display: inline-flex; justify-content: center; align-items: center; width: 100%; padding: 12px; font-size: 15px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; text-decoration: none; margin-bottom: 10px; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-secondary { background: #f1f3f4; color: var(--text); }
+    .btn-outline { background: transparent; border: 1px solid #dadce0; color: var(--subtext); }
+    .btn-info-outline { background: #e8f0fe; color: var(--primary); border: 1px solid #c2e7ff; }
+    .btn-info-outline:hover { background: #d3e3fd; }
+    .btn:disabled { background: #dadce0; cursor: not-allowed; color: #80868b; }
+    .badge { display: block; font-size: 13px; font-weight: 600; text-align: center; margin-top: 6px; }
+    .badge-success { color: var(--success); }
+    .badge-danger { color: var(--danger); }
+    .card-item { background: #fdfdfd; border: 1px solid #e8eaed; border-radius: 8px; padding: 16px; margin-bottom: 16px; text-align: center; }
+    .user-info { background: #e8f0fe; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
+    .page { display: none; }
+    .active-page { display: block; }
+    #loader { display: none; text-align: center; padding: 20px; font-size: 14px; color: var(--subtext); }
+    .spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: 10px;
+      max-width: 420px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-icon { font-size: 40px; margin-bottom: 12px; }
+    .modal-icon.info { color: var(--primary); }
+    .modal-icon.warning { color: #f2994a; }
+    .modal-icon.error { color: var(--danger); }
+    .modal-icon.success { color: var(--success); }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .modal-message { font-size: 14px; color: var(--text); margin-bottom: 20px; line-height: 1.6; text-align: left; }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; }
+    .modal-actions .btn { margin-bottom: 0; flex: 1; }
+    .info-list-item { padding: 6px 0; border-bottom: 1px dashed #e0e0e0; display: flex; justify-content: space-between; }
+    .info-list-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loader">
+      <div class="spinner"></div>
+      <span id="loader-text">Đang xử lý...</span>
+    </div>
+
+    <!-- 1. TRANG NHẬP EMAIL -->
+    <div id="page-login" class="page active-page">
+      <h2>Tra Cứu Thông Tin</h2>
+      <p class="subtitle">Nhập Mail FE (@fpt.edu.vn hoặc @fe.edu.vn)</p>
+      <div class="form-group">
+        <label>Mail FE:</label>
+        <input type="email" id="input-email" placeholder="example@fe.edu.vn">
+      </div>
+      <button class="btn btn-primary" onclick="handleLookup()">Tra Cứu</button>
+    </div>
+
+    <!-- 2. DASHBOARD 1 (ĐANG LÀM) -->
+    <div id="page-dashboard-1" class="page">
+      <h2>Cổng Nhận Thẻ</h2>
+      <div class="user-info" id="user-info-1"></div>
+      
+      <div class="card-item" id="box-car-1">
+        <button id="btn-action-car-1" class="btn btn-primary" onclick="handleCarClickDashboard1()"></button>
+        <span id="status-receive-car" class="badge"></span>
+      </div>
+
+      <div class="card-item" id="box-emp-1">
+        <button id="btn-action-emp-1" class="btn btn-primary" onclick="handleEmpClickDashboard1()"></button>
+        <span id="status-receive-emp" class="badge"></span>
+      </div>
+
+      <button class="btn btn-outline" onclick="logout()">Đăng Xuất</button>
+    </div>
+
+    <!-- 3. FORM NHẬN THẺ XE -->
+    <div id="page-receive-car" class="page">
+      <h2>Xác Nhận Thẻ Xe</h2>
+      <div class="form-group">
+        <label>Số thẻ xe nhận (chỉ nhập số):</label>
+        <div class="prefix-input">
+          <span>No.</span>
+          <input type="tel" inputmode="numeric" pattern="[0-9]*" id="rc-card-no" placeholder="Nhập các số phía sau..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Biển số xe:</label>
+        <input type="text" id="rc-plate" placeholder="Ví dụ: 59A-123.45">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="rc-confirm" onchange="toggleBtn('rc-btn-submit', this.checked)">
+        <label for="rc-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+      </div>
+      <button id="rc-btn-submit" class="btn btn-primary" disabled onclick="submitReceiveCar()">Nhận Thẻ</button>
+      <button class="btn btn-danger" onclick="submitRefuseCar()">Không Nhận Thẻ Xe</button>
+      <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
+    </div>
+
+    <!-- 4. FORM NHẬN THẺ NV -->
+    <div id="page-receive-emp" class="page">
+      <h2>Xác Nhận Thẻ Nhân Viên</h2>
+      <div class="form-group">
+        <label>Tên nhân viên:</label>
+        <input type="text" id="re-name-upper" readonly style="background:#f1f3f4;">
+      </div>
+      <div class="form-group">
+        <label>Mã nhân viên trên thẻ nhận (đúng 8 chữ số):</label>
+        <input type="tel" inputmode="numeric" pattern="[0-9]*" id="re-emp-code" maxlength="8" placeholder="Nhập 8 chữ số (VD: 01234567)..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="re-confirm" onchange="toggleBtn('re-btn-submit', this.checked)">
+        <label for="re-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+      </div>
+      <button id="re-btn-submit" class="btn btn-primary" disabled onclick="submitReceiveEmp()">Nhận Thẻ</button>
+      <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
+    </div>
+
+    <!-- 5. DASHBOARD 2 (THÔI VIỆC) -->
+    <div id="page-dashboard-2" class="page">
+      <h2>Cổng Trả Thẻ</h2>
+      <div class="user-info" id="user-info-2"></div>
+
+      <div class="card-item" id="box-car-2">
+        <button id="btn-action-car-2" class="btn btn-primary" onclick="handleCarClickDashboard2()"></button>
+        <span id="status-return-car" class="badge"></span>
+      </div>
+
+      <div class="card-item" id="box-emp-2">
+        <button id="btn-action-emp-2" class="btn btn-primary" onclick="handleEmpClickDashboard2()"></button>
+        <span id="status-return-emp" class="badge"></span>
+      </div>
+
+      <button class="btn btn-outline" onclick="logout()">Đăng Xuất</button>
+    </div>
+
+    <!-- 6. FORM TRẢ THẺ XE -->
+    <div id="page-return-car" class="page">
+      <h2>Xác Nhận Trả Thẻ Xe</h2>
+      <div class="form-group">
+        <label>Số thẻ xe trả (chỉ nhập số):</label>
+        <div class="prefix-input">
+          <span>No.</span>
+          <input type="tel" inputmode="numeric" pattern="[0-9]*" id="rt-card-no" placeholder="Nhập các số trên thẻ..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="rt-confirm" onchange="toggleBtn('rt-btn-submit', this.checked)">
+        <label for="rt-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+      </div>
+      <button id="rt-btn-submit" class="btn btn-primary" disabled onclick="submitReturnCar()">Trả Thẻ</button>
+      <button class="btn btn-danger" onclick="submitLostCar()">Mất Thẻ</button>
+      <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
+    </div>
+
+    <!-- 7. FORM TRẢ THẺ NV -->
+    <div id="page-return-emp" class="page">
+      <h2>Xác Nhận Trả Thẻ Nhân Viên</h2>
+      <div class="form-group">
+        <label>Tên nhân viên:</label>
+        <input type="text" id="rte-name-upper" readonly style="background:#f1f3f4;">
+      </div>
+      <div class="form-group">
+        <label>Mã nhân viên trên thẻ trả (đúng 8 chữ số):</label>
+        <input type="tel" inputmode="numeric" pattern="[0-9]*" id="rte-emp-code" maxlength="8" placeholder="Nhập 8 chữ số..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="rte-confirm" onchange="toggleBtn('rte-btn-submit', this.checked)">
+        <label for="rte-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+      </div>
+      <button id="rte-btn-submit" class="btn btn-primary" disabled onclick="submitReturnEmp()">Trả Thẻ</button>
+      <button class="btn btn-danger" onclick="submitLostEmp()">Mất Thẻ</button>
+      <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
+    </div>
+
+  </div>
+
+  <div id="custom-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div id="modal-icon" class="modal-icon info"><i class="fa-solid fa-circle-info"></i></div>
+      <div id="modal-title" class="modal-title">Thông báo</div>
+      <div id="modal-msg" class="modal-message">Nội dung thông báo</div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <script>
+    // DÁN LINK APPS SCRIPT WEB APP CỦA ANH VÀO ĐÂY:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMOdm67NsOGlc3hYgEsWsKoWuu5VzvrxpxAWJgevu7nUNg6KxcFWAeN_hAZfERKmCZ/exec";
+
+    let currentUser = null;
+
+    // Gửi Request POST sang Google Apps Script API
+    async function apiRequest(payload) {
+      const response = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+      return await response.json();
+    }
+
+    function showAppAlert(msgHtml, title = "Thông báo", type = "info") {
+      const modal = document.getElementById('custom-modal');
+      const iconEl = document.getElementById('modal-icon');
+      document.getElementById('modal-title').innerText = title;
+      document.getElementById('modal-msg').innerHTML = msgHtml;
+      
+      iconEl.className = 'modal-icon ' + type;
+      if (type === 'success') iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+      else if (type === 'warning') iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+      else if (type === 'error') iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+      else iconEl.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+
+      const actions = document.getElementById('modal-actions');
+      actions.innerHTML = `<button class="btn btn-primary" onclick="closeAppModal()">Đã Hiểu</button>`;
+      modal.style.display = 'flex';
+    }
+
+    function showAppConfirm(msgHtml, onConfirm, title = "Xác nhận", confirmBtnText = "Xác nhận") {
+      const modal = document.getElementById('custom-modal');
+      const iconEl = document.getElementById('modal-icon');
+      document.getElementById('modal-title').innerText = title;
+      document.getElementById('modal-msg').innerHTML = msgHtml;
+
+      iconEl.className = 'modal-icon warning';
+      iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+
+      const actions = document.getElementById('modal-actions');
+      actions.innerHTML = `
+        <button class="btn btn-secondary" onclick="closeAppModal()">Hủy</button>
+        <button class="btn btn-danger" id="modal-confirm-btn">${confirmBtnText}</button>
+      `;
+      document.getElementById('modal-confirm-btn').onclick = function() {
+        closeAppModal();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+      modal.style.display = 'flex';
+    }
+
+    function closeAppModal() {
+      document.getElementById('custom-modal').style.display = 'none';
+    }
+
+    function showLoader(text) {
+      document.getElementById('loader-text').innerText = text || "Đang xử lý...";
+      document.getElementById('loader').style.display = "block";
+    }
+    function hideLoader() {
+      document.getElementById('loader').style.display = "none";
+    }
+
+    function switchPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+      document.getElementById(pageId).classList.add('active-page');
+    }
+
+    function toggleBtn(btnId, isChecked) {
+      document.getElementById(btnId).disabled = !isChecked;
+    }
+
+    function validateEmailDomain(email) {
+      const lower = email.toLowerCase().trim();
+      return lower.endsWith("@fpt.edu.vn") || lower.endsWith("@fe.edu.vn");
+    }
+
+    async function handleLookup() {
+      const email = document.getElementById('input-email').value.trim();
+      if (!email) {
+        showAppAlert("Vui lòng nhập địa chỉ Mail FE!", "Lưu ý", "warning");
+        return;
+      }
+      if (!validateEmailDomain(email)) {
+        showAppAlert("Email không hợp lệ!<br>Vui lòng sử dụng email có đuôi <b>@fpt.edu.vn</b> hoặc <b>@fe.edu.vn</b>.", "Định dạng không đúng", "warning");
+        return;
+      }
+
+      showLoader("Đang tra cứu dữ liệu...");
+      try {
+        const res = await apiRequest({ action: "LOOKUP", email: email });
+        hideLoader();
+        if (res.success) {
+          currentUser = res;
+          currentUser.email = email;
+          renderDashboard();
+        } else {
+          showAppAlert(res.message, "Không tìm thấy", "error");
+        }
+      } catch (err) {
+        hideLoader();
+        showAppAlert("Lỗi kết nối máy chủ: " + err.message, "Lỗi", "error");
+      }
+    }
+
+    function renderDashboard() {
+      const d = currentUser.data;
+      const cardStatus = (d.cardProcessStatus || "").trim();
+
+      if (d.workStatus === "Đang làm") {
+        document.getElementById('user-info-1').innerHTML = `
+          <b>Nhân viên:</b> ${d.nameUpper || d.name} <br>
+          <b>Vị trí:</b> ${d.jobTitle || 'Chưa cập nhật'}
+        `;
+        
+        const carBtn1 = document.getElementById('btn-action-car-1');
+        const carStatusEl = document.getElementById('status-receive-car');
+        if (d.dateReceiveCar) {
+          carBtn1.className = "btn btn-info-outline";
+          carBtn1.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ xe';
+          if (d.cardNoReceiveCar === "Không nhận thẻ xe") {
+            carStatusEl.innerText = "Không nhận thẻ xe";
+            carStatusEl.className = "badge badge-danger";
+          } else {
+            carStatusEl.innerText = "Đã nhận thẻ xe (" + d.cardNoReceiveCar + ")";
+            carStatusEl.className = "badge badge-success";
+          }
+        } else {
+          carBtn1.className = "btn btn-primary";
+          carBtn1.innerHTML = '<i class="fa-solid fa-motorcycle" style="margin-right:8px;"></i> Nhận Thẻ Xe';
+          carStatusEl.innerText = "";
+        }
+
+        const boxEmp1 = document.getElementById('box-emp-1');
+        if (cardStatus === "Đã làm thẻ" || cardStatus === "Đã nhận thẻ") {
+          boxEmp1.style.display = "block";
+          const empBtn1 = document.getElementById('btn-action-emp-1');
+          const empStatusEl = document.getElementById('status-receive-emp');
+          if (d.dateReceiveEmp) {
+            empBtn1.className = "btn btn-info-outline";
+            empBtn1.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ nhân viên';
+            empStatusEl.innerText = "Đã nhận thẻ nhân viên (" + d.cardNoReceiveEmp + ")";
+            empStatusEl.className = "badge badge-success";
+          } else {
+            empBtn1.className = "btn btn-primary";
+            empBtn1.innerHTML = '<i class="fa-solid fa-id-card" style="margin-right:8px;"></i> Nhận Thẻ Nhân Viên';
+            empStatusEl.innerText = "";
+          }
+        } else {
+          boxEmp1.style.display = "none";
+        }
+
+        switchPage('page-dashboard-1');
+      } else if (d.workStatus === "Thôi việc") {
+        document.getElementById('user-info-2').innerHTML = `
+          <b>Nhân viên:</b> ${d.nameUpper || d.name} <br>
+          <b>Vị trí:</b> ${d.jobTitle || 'Chưa cập nhật'}
+        `;
+        
+        const carBtn2 = document.getElementById('btn-action-car-2');
+        const carReturnEl = document.getElementById('status-return-car');
+        if (d.dateReturnCar) {
+          carBtn2.className = "btn btn-info-outline";
+          carBtn2.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ xe';
+          if (d.cardNoReturnCar === "Mất thẻ") {
+            carReturnEl.innerText = "Mất thẻ";
+            carReturnEl.className = "badge badge-danger";
+          } else if (d.cardNoReturnCar === "Không nhận thẻ xe") {
+            carReturnEl.innerText = "Không nhận thẻ xe";
+            carReturnEl.className = "badge badge-danger";
+          } else {
+            carReturnEl.innerText = "Đã trả thẻ xe";
+            carReturnEl.className = "badge badge-success";
+          }
+        } else {
+          carBtn2.className = "btn btn-primary";
+          carBtn2.innerHTML = '<i class="fa-solid fa-motorcycle" style="margin-right:8px;"></i> Trả Thẻ Xe';
+          carReturnEl.innerText = "";
+        }
+
+        const boxEmp2 = document.getElementById('box-emp-2');
+        if (cardStatus === "Đã nhận thẻ") {
+          boxEmp2.style.display = "block";
+          const empBtn2 = document.getElementById('btn-action-emp-2');
+          const empReturnEl = document.getElementById('status-return-emp');
+          if (d.dateReturnEmp) {
+            empBtn2.className = "btn btn-info-outline";
+            empBtn2.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ nhân viên';
+            if (d.cardNoReturnEmp === "Mất thẻ") {
+              empReturnEl.innerText = "Mất thẻ";
+              empReturnEl.className = "badge badge-danger";
+            } else {
+              empReturnEl.innerText = "Đã trả thẻ nhân viên";
+              empReturnEl.className = "badge badge-success";
+            }
+          } else {
+            empBtn2.className = "btn btn-primary";
+            empBtn2.innerHTML = '<i class="fa-solid fa-id-card" style="margin-right:8px;"></i> Trả Thẻ Nhân Viên';
+            empReturnEl.innerText = "";
+          }
+        } else {
+          boxEmp2.style.display = "none";
+        }
+
+        switchPage('page-dashboard-2');
+      } else {
+        showAppAlert("Trạng thái nhân sự không xác định: " + d.workStatus, "Thông báo", "warning");
+      }
+    }
+
+    function handleCarClickDashboard1() {
+      const d = currentUser.data;
+      if (d.dateReceiveCar) showCarDetailsModal();
+      else openReceiveCar();
+    }
+
+    function handleEmpClickDashboard1() {
+      const d = currentUser.data;
+      if (d.dateReceiveEmp) showEmpDetailsModal();
+      else openReceiveEmp();
+    }
+
+    function handleCarClickDashboard2() {
+      const d = currentUser.data;
+      if (d.dateReturnCar) showCarDetailsModal();
+      else openReturnCar();
+    }
+
+    function handleEmpClickDashboard2() {
+      const d = currentUser.data;
+      if (d.dateReturnEmp) showEmpDetailsModal();
+      else openReturnEmp();
+    }
+
+    function showCarDetailsModal() {
+      const d = currentUser.data;
+      let html = `
+        <div class="info-list-item"><span><b>Trạng thái nhận:</b></span> <span>${d.cardNoReceiveCar === 'Không nhận thẻ xe' ? '<span style="color:var(--danger)">Không nhận</span>' : '<span style="color:var(--success)">Đã nhận</span>'}</span></div>
+        <div class="info-list-item"><span><b>Số thẻ xe nhận:</b></span> <span>${d.cardNoReceiveCar || 'N/A'}</span></div>
+        <div class="info-list-item"><span><b>Biển số xe:</b></span> <span>${d.plateReceiveCar || 'N/A'}</span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveCar || 'N/A'}</span></div>
+      `;
+      if (d.dateReturnCar) {
+        html += `
+          <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnCar}</b></span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnCar}</span></div>
+        `;
+      }
+      showAppAlert(html, "Chi Tiết Thẻ Xe", "info");
+    }
+
+    function showEmpDetailsModal() {
+      const d = currentUser.data;
+      let html = `
+        <div class="info-list-item"><span><b>Họ tên:</b></span> <span>${d.nameUpper || d.name}</span></div>
+        <div class="info-list-item"><span><b>Mã NV trên thẻ nhận:</b></span> <span><b>${d.cardNoReceiveEmp || 'N/A'}</b></span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveEmp || 'N/A'}</span></div>
+      `;
+      if (d.dateReturnEmp) {
+        html += `
+          <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnEmp}</b></span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnEmp}</span></div>
+        `;
+      }
+      showAppAlert(html, "Chi Tiết Thẻ Nhân Viên", "info");
+    }
+
+    function openReceiveCar() {
+      document.getElementById('rc-card-no').value = "";
+      document.getElementById('rc-plate').value = "";
+      document.getElementById('rc-confirm').checked = false;
+      toggleBtn('rc-btn-submit', false);
+      switchPage('page-receive-car');
+    }
+
+    function submitReceiveCar() {
+      const cardSuffix = document.getElementById('rc-card-no').value.trim();
+      const plate = document.getElementById('rc-plate').value.trim();
+      if (!cardSuffix || !plate) {
+        showAppAlert("Vui lòng điền đầy đủ số thẻ xe và biển số xe!", "Thiếu thông tin", "warning");
+        return;
+      }
+      callBackendAction({ action: 'RECEIVE_CAR', cardNo: "No." + cardSuffix, plate: plate });
+    }
+
+    function submitRefuseCar() {
+      showAppConfirm("Bạn có chắc chắn <b>KHÔNG</b> nhận thẻ xe?", function() {
+        callBackendAction({ action: 'REFUSE_CAR' });
+      }, "Xác nhận không nhận thẻ", "Xác nhận");
+    }
+
+    function openReceiveEmp() {
+      const d = currentUser.data;
+      document.getElementById('re-name-upper').value = d.nameUpper || d.name;
+      document.getElementById('re-emp-code').value = "";
+      document.getElementById('re-confirm').checked = false;
+      toggleBtn('re-btn-submit', false);
+      switchPage('page-receive-emp');
+    }
+
+    function submitReceiveEmp() {
+      const empCode = document.getElementById('re-emp-code').value.trim();
+      if (!/^\d{8}$/.test(empCode)) {
+        showAppAlert("Mã nhân viên bắt buộc phải là <b>đúng 8 chữ số</b> (ví dụ: 01234567)!", "Mã không hợp lệ", "warning");
+        return;
+      }
+      callBackendAction({ action: 'RECEIVE_EMP', empCode: empCode });
+    }
+
+    function openReturnCar() {
+      const d = currentUser.data;
+      const isReceiveCarEmpty = (!d.dateReceiveCar || d.dateReceiveCar === "") &&
+                                (!d.cardNoReceiveCar || d.cardNoReceiveCar === "") &&
+                                (!d.plateReceiveCar || d.plateReceiveCar === "");
+      if (isReceiveCarEmpty) {
+        showAppAlert("Bạn chưa từng nhận thẻ xe nên không thể thực hiện thao tác trả thẻ!", "Thông báo", "warning");
+        return;
+      }
+      if (d.cardNoReceiveCar === "Không nhận thẻ xe" || d.plateReceiveCar === "Không nhận thẻ xe") {
+        showAppAlert("Bạn không nhận thẻ xe nên không cần trả.", "Thông báo", "info");
+        callBackendAction({ action: 'AUTO_SKIP_RETURN_CAR' });
+        return;
+      }
+      document.getElementById('rt-card-no').value = "";
+      document.getElementById('rt-confirm').checked = false;
+      toggleBtn('rt-btn-submit', false);
+      switchPage('page-return-car');
+    }
+
+    function submitReturnCar() {
+      const cardSuffix = document.getElementById('rt-card-no').value.trim();
+      if (!cardSuffix) {
+        showAppAlert("Vui lòng nhập số thẻ xe trả!", "Thiếu thông tin", "warning");
+        return;
+      }
+      callBackendAction({ action: 'RETURN_CAR', cardNo: "No." + cardSuffix });
+    }
+
+    function submitLostCar() {
+      const msg = `Bạn xác nhận báo <b>MẤT</b> thẻ xe?<br><br><span style="color:var(--danger)">* Lưu ý: Vui lòng liên hệ Phòng Hành chính / Nhân sự để làm thủ tục bồi hoàn và cấp lại thẻ mới.</span>`;
+      showAppConfirm(msg, function() {
+        callBackendAction({ action: 'LOST_CAR' });
+      }, "Xác nhận mất thẻ", "Báo mất thẻ");
+    }
+
+    function openReturnEmp() {
+      const d = currentUser.data;
+      document.getElementById('rte-name-upper').value = d.nameUpper || d.name;
+      document.getElementById('rte-emp-code').value = "";
+      document.getElementById('rte-confirm').checked = false;
+      toggleBtn('rte-btn-submit', false);
+      switchPage('page-return-emp');
+    }
+
+    function submitReturnEmp() {
+      const empCode = document.getElementById('rte-emp-code').value.trim();
+      if (!/^\d{8}$/.test(empCode)) {
+        showAppAlert("Mã nhân viên bắt buộc phải là <b>đúng 8 chữ số</b>!", "Mã không hợp lệ", "warning");
+        return;
+      }
+      callBackendAction({ action: 'RETURN_EMP', empCode: empCode });
+    }
+
+    function submitLostEmp() {
+      const msg = `Bạn xác nhận báo <b>MẤT</b> thẻ nhân viên?<br><br><span style="color:var(--danger)">* Lưu ý: Vui lòng liên hệ Phòng Hành chính / Nhân sự để làm thủ tục bồi hoàn và cấp lại thẻ mới.</span>`;
+      showAppConfirm(msg, function() {
+        callBackendAction({ action: 'LOST_EMP' });
+      }, "Xác nhận mất thẻ", "Báo mất thẻ");
+    }
+
+    async function callBackendAction(extraData) {
+      showLoader("Đang lưu thông tin...");
+      const payload = Object.assign({
+        email: currentUser.email,
+        rowIdx: currentUser.rowIdx
+      }, extraData);
+
+      try {
+        const res = await apiRequest(payload);
+        hideLoader();
+        if (res.success) {
+          currentUser = res;
+          currentUser.email = payload.email;
+          showAppAlert("Cập nhật thông tin thành công!", "Thành công", "success");
+          renderDashboard();
+        } else {
+          showAppAlert(res.message, "Thất bại", "error");
+        }
+      } catch (err) {
+        hideLoader();
+        showAppAlert("Lỗi kết nối máy chủ: " + err.message, "Lỗi", "error");
+      }
+    }
+
+    function backToDashboard() {
+      renderDashboard();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('input-email').value = "";
+      switchPage('page-login');
+    }
+  </script>
+</body>
+</html>
