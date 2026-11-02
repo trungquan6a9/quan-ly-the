@@ -48,7 +48,6 @@
     #loader { display: none; text-align: center; padding: 20px; font-size: 14px; color: var(--subtext); }
     .spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     .modal-overlay {
       display: none;
       position: fixed;
@@ -113,12 +112,10 @@
         <button id="btn-action-car-1" class="btn btn-primary" onclick="handleCarClickDashboard1()"></button>
         <span id="status-receive-car" class="badge"></span>
       </div>
-
       <div class="card-item" id="box-emp-1">
         <button id="btn-action-emp-1" class="btn btn-primary" onclick="handleEmpClickDashboard1()"></button>
         <span id="status-receive-emp" class="badge"></span>
       </div>
-
       <button class="btn btn-outline" onclick="logout()">Đăng Xuất</button>
     </div>
 
@@ -153,12 +150,12 @@
         <input type="text" id="re-name-upper" readonly style="background:#f1f3f4;">
       </div>
       <div class="form-group">
-        <label>Mã nhân viên trên thẻ nhận (đúng 8 chữ số):</label>
-        <input type="tel" inputmode="numeric" pattern="[0-9]*" id="re-emp-code" maxlength="8" placeholder="Nhập 8 chữ số (VD: 01234567)..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        <label>Mã nhân viên (ID):</label>
+        <input type="text" id="re-emp-id" readonly style="background:#f1f3f4; font-weight:bold; color:var(--primary);">
       </div>
       <div class="checkbox-group">
         <input type="checkbox" id="re-confirm" onchange="toggleBtn('re-btn-submit', this.checked)">
-        <label for="re-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+        <label for="re-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin thẻ là chính xác</label>
       </div>
       <button id="re-btn-submit" class="btn btn-primary" disabled onclick="submitReceiveEmp()">Nhận Thẻ</button>
       <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
@@ -168,17 +165,14 @@
     <div id="page-dashboard-2" class="page">
       <h2>Cổng Trả Thẻ</h2>
       <div class="user-info" id="user-info-2"></div>
-
       <div class="card-item" id="box-car-2">
         <button id="btn-action-car-2" class="btn btn-primary" onclick="handleCarClickDashboard2()"></button>
         <span id="status-return-car" class="badge"></span>
       </div>
-
       <div class="card-item" id="box-emp-2">
         <button id="btn-action-emp-2" class="btn btn-primary" onclick="handleEmpClickDashboard2()"></button>
         <span id="status-return-emp" class="badge"></span>
       </div>
-
       <button class="btn btn-outline" onclick="logout()">Đăng Xuất</button>
     </div>
 
@@ -209,18 +203,17 @@
         <input type="text" id="rte-name-upper" readonly style="background:#f1f3f4;">
       </div>
       <div class="form-group">
-        <label>Mã nhân viên trên thẻ trả (đúng 8 chữ số):</label>
-        <input type="tel" inputmode="numeric" pattern="[0-9]*" id="rte-emp-code" maxlength="8" placeholder="Nhập 8 chữ số..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        <label>Mã nhân viên (ID):</label>
+        <input type="text" id="rte-emp-id" readonly style="background:#f1f3f4; font-weight:bold; color:var(--primary);">
       </div>
       <div class="checkbox-group">
         <input type="checkbox" id="rte-confirm" onchange="toggleBtn('rte-btn-submit', this.checked)">
-        <label for="rte-confirm" style="margin-bottom:0;">Tôi xác nhận thông tin trên là đúng</label>
+        <label for="rte-confirm" style="margin-bottom:0;">Tôi xác nhận trả lại thẻ nhân viên</label>
       </div>
       <button id="rte-btn-submit" class="btn btn-primary" disabled onclick="submitReturnEmp()">Trả Thẻ</button>
       <button class="btn btn-danger" onclick="submitLostEmp()">Mất Thẻ</button>
       <button class="btn btn-secondary" onclick="backToDashboard()">Quay Lại</button>
     </div>
-
   </div>
 
   <div id="custom-modal" class="modal-overlay">
@@ -233,127 +226,46 @@
   </div>
 
   <script>
-    const APP_NAME = "NhanTraThe";
-    const APP_VERSION = "1.0.4";
-
-    // Format ngày giờ hiển thị chuẩn dd/MM/yyyy HH:mm:ss
-    function formatDisplayDate(val) {
-      if (!val) return 'N/A';
-      const str = String(val).trim();
-      if (!str || str === 'N/A') return 'N/A';
-
-      // Nếu đã đúng định dạng dd/MM/yyyy HH:mm:ss (ngày > 12 hoặc đã chuẩn)
-      // Kiểm tra pattern: MM/dd/yyyy HH:mm:ss hoặc dd/MM/yyyy HH:mm:ss
-      const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2}):?(\d{1,2})?)?/);
-      if (match) {
-        let p1 = parseInt(match[1], 10);
-        let p2 = parseInt(match[2], 10);
-        const y = match[3];
-        const timePart = (match[4] !== undefined) ? ` ${match[4].padStart(2, '0')}:${match[5].padStart(2, '0')}:${(match[6] || '00').padStart(2, '0')}` : '';
-
-        // Trường hợp bị đảo MM/dd/yyyy (ví dụ: 10/05/2026 trong khi hôm nay là 05/10/2026):
-        // Nếu p1 <= 12 và p2 <= 31, nhưng trên hệ thống trả về tháng đứng trước ngày (chuẩn US của Sheet/JS date)
-        // Lưu ý: nếu p1 > 12 thì chắc chắn p1 là ngày rồi (ví dụ: 25/10/2026) -> giữ nguyên p1/p2/y.
-        // Ngược lại nếu p1 <= 12 và dữ liệu từ Google Sheet tự convert thành MM/dd/yyyy -> hoán đổi lại thành dd/MM/yyyy:
-        // Cần đảm bảo nếu được nhập từ Google Sheet US format:
-        return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${y}${timePart}`;
-      }
-
-      // Thử parse qua Date object nếu là ISO hoặc format khác
-      const d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const ss = String(d.getSeconds()).padStart(2, '0');
-        return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
-      }
-
-      return str;
-    }
-
     // DÁN LINK APPS SCRIPT WEB APP CỦA ANH VÀO ĐÂY:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBkd-t0TI8Y3Zkc-CK378at44j7WvYR6e08UYFbbn6pzCgz22OxJLGUSp9c2rFfnxn/exec";
-
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMOdm67NsOGlc3hYgEsWsKoWuu5VzvrxpxAWJgevu7nUNg6KxcFWAeN_hAZfERKmCZ/exec";
+    
     let currentUser = null;
 
-    // Gọi API siêu tốc và tin cậy tuyệt đối:
-    // JSONP là cơ chế nhanh nhất và tương thích 100% với Google Apps Script Web App (không bị nghẽn CORS hay 302 Redirect)
-    function callJsonp(payload, timeoutMs = 12000) {
-      return new Promise((resolve, reject) => {
-        const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-        const script = document.createElement('script');
-        script.crossOrigin = "anonymous";
-
-        const timer = setTimeout(() => {
-          cleanup();
-          reject(new Error("Timeout khi kết nối đến máy chủ Google"));
-        }, timeoutMs);
-
-        function cleanup() {
-          clearTimeout(timer);
-          delete window[callbackName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        window[callbackName] = function(data) {
-          cleanup();
-          resolve(data);
-        };
-
-        script.onerror = function() {
-          cleanup();
-          reject(new Error("Lỗi mạng khi tải script"));
-        };
-
-        script.src = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
-        document.body.appendChild(script);
-      });
-    }
-
-    async function callFetchGet(payload, timeoutMs = 12000) {
-      const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      const res = await fetch(url, {
-        method: "GET",
-        mode: "cors",
-        credentials: "omit",
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        throw new Error("HTTP Status " + res.status);
-      }
-      return await res.json();
-    }
-
+    // Gọi API tối ưu với credentials: omit chống xung đột cookie trên điện thoại
     async function apiRequest(payload) {
-      const maxRetries = 2;
-      let lastErr = null;
+      const url = SCRIPT_URL + "?data=" + encodeURIComponent(JSON.stringify(payload));
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          mode: "cors",
+          credentials: "omit",
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error("Mã lỗi: " + response.status);
+        return await response.json();
+      } catch (fetchErr) {
+        // Fallback JSONP
+        return new Promise((resolve, reject) => {
+          const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+          const script = document.createElement('script');
+          script.crossOrigin = "anonymous";
+          
+          window[callbackName] = function(data) {
+            delete window[callbackName];
+            if (document.body.contains(script)) document.body.removeChild(script);
+            resolve(data);
+          };
 
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        if (attempt > 0) {
-          await new Promise(r => setTimeout(r, 600 * attempt));
-        }
+          script.onerror = function() {
+            delete window[callbackName];
+            if (document.body.contains(script)) document.body.removeChild(script);
+            reject(new Error("Không thể kết nối đến máy chủ Google"));
+          };
 
-        // Chạy đua song song giữa JSONP và GET fetch: Kênh nào nhận data từ Apps Script trước thì lấy ngay!
-        try {
-          const result = await Promise.any([
-            callJsonp(payload, 10000),
-            callFetchGet(payload, 10000)
-          ]);
-          return result;
-        } catch (aggErr) {
-          lastErr = aggErr;
-        }
+          script.src = SCRIPT_URL + "?callback=" + callbackName + "&data=" + encodeURIComponent(JSON.stringify(payload));
+          document.body.appendChild(script);
+        });
       }
-
-      throw (lastErr || new Error("Không thể kết nối đến máy chủ Google. Vui lòng thử lại sau vài giây!"));
     }
 
     function showAppAlert(msgHtml, title = "Thông báo", type = "info") {
@@ -378,10 +290,8 @@
       const iconEl = document.getElementById('modal-icon');
       document.getElementById('modal-title').innerText = title;
       document.getElementById('modal-msg').innerHTML = msgHtml;
-
       iconEl.className = 'modal-icon warning';
       iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-
       const actions = document.getElementById('modal-actions');
       actions.innerHTML = `
         <button class="btn btn-secondary" onclick="closeAppModal()">Hủy</button>
@@ -402,6 +312,7 @@
       document.getElementById('loader-text').innerText = text || "Đang xử lý...";
       document.getElementById('loader').style.display = "block";
     }
+
     function hideLoader() {
       document.getElementById('loader').style.display = "none";
     }
@@ -430,7 +341,6 @@
         showAppAlert("Email không hợp lệ!<br>Vui lòng sử dụng email có đuôi <b>@fpt.edu.vn</b> hoặc <b>@fe.edu.vn</b>.", "Định dạng không đúng", "warning");
         return;
       }
-
       showLoader("Đang tra cứu dữ liệu...");
       try {
         const res = await apiRequest({ action: "LOOKUP", email: email });
@@ -451,10 +361,11 @@
     function renderDashboard() {
       const d = currentUser.data;
       const cardStatus = (d.cardProcessStatus || "").trim();
-
+      
       if (d.workStatus === "Đang làm") {
         document.getElementById('user-info-1').innerHTML = `
           <b>Nhân viên:</b> ${d.nameUpper || d.name} <br>
+          <b>Mã NV (ID):</b> ${d.id || 'Chưa có'} <br>
           <b>Vị trí:</b> ${d.jobTitle || 'Chưa cập nhật'}
         `;
         
@@ -484,7 +395,7 @@
           if (d.dateReceiveEmp) {
             empBtn1.className = "btn btn-info-outline";
             empBtn1.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ nhân viên';
-            empStatusEl.innerText = "Đã nhận thẻ nhân viên (" + d.cardNoReceiveEmp + ")";
+            empStatusEl.innerText = "Đã nhận thẻ nhân viên";
             empStatusEl.className = "badge badge-success";
           } else {
             empBtn1.className = "btn btn-primary";
@@ -494,11 +405,11 @@
         } else {
           boxEmp1.style.display = "none";
         }
-
         switchPage('page-dashboard-1');
       } else if (d.workStatus === "Thôi việc") {
         document.getElementById('user-info-2').innerHTML = `
           <b>Nhân viên:</b> ${d.nameUpper || d.name} <br>
+          <b>Mã NV (ID):</b> ${d.id || 'Chưa có'} <br>
           <b>Vị trí:</b> ${d.jobTitle || 'Chưa cập nhật'}
         `;
         
@@ -531,7 +442,7 @@
           if (d.dateReturnEmp) {
             empBtn2.className = "btn btn-info-outline";
             empBtn2.innerHTML = '<i class="fa-solid fa-eye" style="margin-right:8px;"></i> Xem thông tin thẻ nhân viên';
-            if (d.cardNoReturnEmp === "Mất thẻ") {
+            if (d.dateReturnEmp === "Mất thẻ") {
               empReturnEl.innerText = "Mất thẻ";
               empReturnEl.className = "badge badge-danger";
             } else {
@@ -546,7 +457,6 @@
         } else {
           boxEmp2.style.display = "none";
         }
-
         switchPage('page-dashboard-2');
       } else {
         showAppAlert("Trạng thái nhân sự không xác định: " + d.workStatus, "Thông báo", "warning");
@@ -583,12 +493,12 @@
         <div class="info-list-item"><span><b>Trạng thái nhận:</b></span> <span>${d.cardNoReceiveCar === 'Không nhận thẻ xe' ? '<span style="color:var(--danger)">Không nhận</span>' : '<span style="color:var(--success)">Đã nhận</span>'}</span></div>
         <div class="info-list-item"><span><b>Số thẻ xe nhận:</b></span> <span>${d.cardNoReceiveCar || 'N/A'}</span></div>
         <div class="info-list-item"><span><b>Biển số xe:</b></span> <span>${d.plateReceiveCar || 'N/A'}</span></div>
-        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${formatDisplayDate(d.dateReceiveCar)}</span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveCar || 'N/A'}</span></div>
       `;
       if (d.dateReturnCar) {
         html += `
           <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnCar}</b></span></div>
-          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${formatDisplayDate(d.dateReturnCar)}</span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnCar}</span></div>
         `;
       }
       showAppAlert(html, "Chi Tiết Thẻ Xe", "info");
@@ -598,13 +508,13 @@
       const d = currentUser.data;
       let html = `
         <div class="info-list-item"><span><b>Họ tên:</b></span> <span>${d.nameUpper || d.name}</span></div>
-        <div class="info-list-item"><span><b>Mã NV trên thẻ nhận:</b></span> <span><b>${d.cardNoReceiveEmp || 'N/A'}</b></span></div>
-        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${formatDisplayDate(d.dateReceiveEmp)}</span></div>
+        <div class="info-list-item"><span><b>Mã nhân viên (ID):</b></span> <span><b>${d.id || 'N/A'}</b></span></div>
+        <div class="info-list-item"><span><b>Ngày nhận:</b></span> <span>${d.dateReceiveEmp || 'N/A'}</span></div>
       `;
       if (d.dateReturnEmp) {
         html += `
-          <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.cardNoReturnEmp}</b></span></div>
-          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${formatDisplayDate(d.dateReturnEmp)}</span></div>
+          <div class="info-list-item" style="margin-top:10px; border-top:1px solid #ccc; padding-top:8px;"><span><b>Trạng thái trả:</b></span> <span><b>${d.dateReturnEmp === 'Mất thẻ' ? 'Mất thẻ' : 'Đã trả'}</b></span></div>
+          <div class="info-list-item"><span><b>Ngày hoàn tất:</b></span> <span>${d.dateReturnEmp}</span></div>
         `;
       }
       showAppAlert(html, "Chi Tiết Thẻ Nhân Viên", "info");
@@ -634,22 +544,18 @@
       }, "Xác nhận không nhận thẻ", "Xác nhận");
     }
 
+    // HIỂN THỊ MÃ ID TRỰC TIẾP TỪ DỮ LIỆU
     function openReceiveEmp() {
       const d = currentUser.data;
       document.getElementById('re-name-upper').value = d.nameUpper || d.name;
-      document.getElementById('re-emp-code').value = "";
+      document.getElementById('re-emp-id').value = d.id || '';
       document.getElementById('re-confirm').checked = false;
       toggleBtn('re-btn-submit', false);
       switchPage('page-receive-emp');
     }
 
     function submitReceiveEmp() {
-      const empCode = document.getElementById('re-emp-code').value.trim();
-      if (!/^\d{8}$/.test(empCode)) {
-        showAppAlert("Mã nhân viên bắt buộc phải là <b>đúng 8 chữ số</b> (ví dụ: 01234567)!", "Mã không hợp lệ", "warning");
-        return;
-      }
-      callBackendAction({ action: 'RECEIVE_EMP', empCode: empCode });
+      callBackendAction({ action: 'RECEIVE_EMP' });
     }
 
     function openReturnCar() {
@@ -688,22 +594,18 @@
       }, "Xác nhận mất thẻ", "Báo mất thẻ");
     }
 
+    // HIỂN THỊ MÃ ID TRỰC TIẾP TỪ DỮ LIỆU KHI TRẢ THẺ
     function openReturnEmp() {
       const d = currentUser.data;
       document.getElementById('rte-name-upper').value = d.nameUpper || d.name;
-      document.getElementById('rte-emp-code').value = "";
+      document.getElementById('rte-emp-id').value = d.id || '';
       document.getElementById('rte-confirm').checked = false;
       toggleBtn('rte-btn-submit', false);
       switchPage('page-return-emp');
     }
 
     function submitReturnEmp() {
-      const empCode = document.getElementById('rte-emp-code').value.trim();
-      if (!/^\d{8}$/.test(empCode)) {
-        showAppAlert("Mã nhân viên bắt buộc phải là <b>đúng 8 chữ số</b>!", "Mã không hợp lệ", "warning");
-        return;
-      }
-      callBackendAction({ action: 'RETURN_EMP', empCode: empCode });
+      callBackendAction({ action: 'RETURN_EMP' });
     }
 
     function submitLostEmp() {
@@ -719,7 +621,6 @@
         email: currentUser.email,
         rowIdx: currentUser.rowIdx
       }, extraData);
-
       try {
         const res = await apiRequest(payload);
         hideLoader();
@@ -749,3 +650,4 @@
   </script>
 </body>
 </html>
+
